@@ -33,7 +33,25 @@ brick_width = (W - (brick_cols + 1) * brick_padding) // brick_cols
 brick_height = 30
 bricks = []
 
+
+#The new variables that we use for unbreakable bricks 
+unbreakable_brick_color = (100, 100, 100)
+unbreakable_probability = 0.2  # 20% chance for a brick to be unbreakable
+
+# Add bricks with some unbreakable
 for row in range(brick_rows):
+    brick_row = []
+    for col in range(brick_cols):
+        brick_x = col * (brick_width + brick_padding) + brick_padding
+        brick_y = row * (brick_height + brick_padding) + 50
+        brick = pygame.Rect(brick_x, brick_y, brick_width, brick_height)
+        is_unbreakable = random.random() < unbreakable_probability
+        brick_color = unbreakable_brick_color if is_unbreakable else [random.randint(0, 255) for _ in range(3)]
+        brick_row.append((brick, brick_color, not is_unbreakable))
+    bricks.append(brick_row)
+    
+    """
+    for row in range(brick_rows):
     brick_row = []
     for col in range(brick_cols):
         brick_x = col * (brick_width + brick_padding) + brick_padding
@@ -42,6 +60,7 @@ for row in range(brick_rows):
         brick_color = [random.randint(0, 255) for _ in range(3)]
         brick_row.append((brick, brick_color))
     bricks.append(brick_row)
+    """
 
 # Game over
 font = pygame.font.SysFont('comicsansms', 40)
@@ -68,7 +87,7 @@ while not done:
     
     # Draw bricks
     for brick_row in bricks:
-        for brick, color in brick_row:
+        for brick, color, breakable in brick_row:
             pygame.draw.rect(screen, color, brick)
     
     # Paddle Control
@@ -93,14 +112,15 @@ while not done:
         dy = -dy
     # Collision with bricks
     for brick_row in bricks:
-        for brick, color in brick_row:
+        for brick, color, breakable in brick_row:
             if ball.colliderect(brick):
-                brick_row.remove((brick, color))
+                if breakable:
+                    brick_row.remove((brick, color, breakable))
                 dy = -dy
                 break
 
-    # Check if all bricks are broken (win)
-    if all(not brick_row for brick_row in bricks):
+    # Check if all breakable bricks are broken (win)
+    if all(not brick_row or all(not breakable for _, _, breakable in brick_row) for brick_row in bricks):
         screen.fill((0, 0, 0))
         screen.blit(win_text, win_textRect)
 
