@@ -1,4 +1,4 @@
-# Section #1. Initial set up
+# Section #1. Initial setup
 import pygame
 import random
 
@@ -10,9 +10,9 @@ FPS = 60
 screen = pygame.display.set_mode((W, H), pygame.RESIZABLE)
 clock = pygame.time.Clock()
 done = False
-bg = (255, 192, 203)
+bg = (255, 192, 43)
 
-# Section #2. Adding objects of a ball and a paddle
+# Section #2. Adding objects for the ball and paddle
 paddleW = 200
 paddleH = 25
 paddleSpeed = 20
@@ -35,18 +35,29 @@ brick_height = 30
 bricks = []
 
 unbreakable_brick_color = (100, 100, 100)
-unbreakable_probability = 0.15  # % chance for a brick to be unbreakable
+bonus_brick_color = (0, 0, 255)
+unbreakable_probability = 0.15  
+bonus_probability = 0.05  
 
-# Add bricks with some unbreakable
+# Adding bricks with some unbreakable and bonus bricks
 for row in range(brick_rows):
     brick_row = []
     for col in range(brick_cols):
         brick_x = col * (brick_width + brick_padding) + brick_padding
         brick_y = row * (brick_height + brick_padding) + 50
         brick = pygame.Rect(brick_x, brick_y, brick_width, brick_height)
-        is_unbreakable = random.random() < unbreakable_probability
-        brick_color = unbreakable_brick_color if is_unbreakable else [random.randint(0, 255) for _ in range(3)]
-        brick_row.append((brick, brick_color, not is_unbreakable))
+        
+        if random.random() < bonus_probability:
+            brick_color = bonus_brick_color
+            breakable = True
+            bonus = 'double_paddle'  # Bonus flag for doubling the paddle width
+        else:
+            is_unbreakable = random.random() < unbreakable_probability
+            brick_color = unbreakable_brick_color if is_unbreakable else [random.randint(0, 255) for _ in range(3)]
+            breakable = not is_unbreakable
+            bonus = None
+        
+        brick_row.append((brick, brick_color, breakable, bonus))
     bricks.append(brick_row)
 
 # Game over
@@ -74,13 +85,13 @@ while not done:
     screen.fill(bg)
 
     # Draw paddle
-    pygame.draw.rect(screen, pygame.Color(234, 250, 177), paddle)
+    pygame.draw.rect(screen, pygame.Color(250, 250, 250), paddle)
     # Draw ball
-    pygame.draw.circle(screen, pygame.Color(250, 241, 157), ball.center, ballRadius)
+    pygame.draw.circle(screen, pygame.Color(30, 30, 30), ball.center, ballRadius)
     
     # Draw bricks
     for brick_row in bricks:
-        for brick, color, breakable in brick_row:
+        for brick, color, breakable, bonus in brick_row:
             pygame.draw.rect(screen, color, brick)
     
     # Paddle Control
@@ -97,7 +108,7 @@ while not done:
     # Collision left or right
     if ball.centerx < ballRadius or ball.centerx > W - ballRadius:
         dx = -dx
-    # Collision TOP
+    # Collision top
     if ball.centery < ballRadius + 50:
         dy = -dy
     # Collision with paddle
@@ -105,15 +116,18 @@ while not done:
         dy = -dy
     # Collision with bricks
     for brick_row in bricks:
-        for brick, color, breakable in brick_row:
+        for brick, color, breakable, bonus in brick_row:
             if ball.colliderect(brick):
                 if breakable:
-                    brick_row.remove((brick, color, breakable))
+                    brick_row.remove((brick, color, breakable, bonus))
+                    if bonus == 'double_paddle':
+                        paddle.width = min(paddle.width * 2, W)  # Double the paddle width
+                        paddle.left = max(paddle.left - (paddle.width // 4), 0)  # Adjust position
                 dy = -dy
                 break
 
     # Check if all breakable bricks are broken (win)
-    if all(not brick_row or all(not breakable for _, _, breakable in brick_row) for brick_row in bricks):
+    if all(not brick_row or all(not breakable for _, _, breakable, _ in brick_row) for brick_row in bricks):
         screen.fill((0, 0, 0))
         screen.blit(win_text, win_textRect)
 
@@ -131,7 +145,7 @@ while not done:
     # Shrink paddle over time
     if current_time - last_paddle_shrink_time >= paddle_shrink_interval:
         if paddle.width > 40:  # Ensure paddle doesn't become too small
-            paddle.width -= 20  # Shrink paddle
+            paddle.width -= 20  # Shrink the paddle
             paddle.left += 10  # Adjust position to keep it centered
             last_paddle_shrink_time = current_time
 
